@@ -1,12 +1,9 @@
 {
-  "projectId": "charming-rigging-gvr20",
-  "appId": "1:786972936856:web:a51589f0603da366b79eed",
-  "apiKey": "AIzaSyCBt5_Kr7dsoDRE-4YwGhxgkEVkCYFJcP0",
-  "authDomain": "charming-rigging-gvr20.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-82008bce-e830-4e08-b35c-63acacdb71d2",
-  "storageBucket": "charming-rigging-gvr20.firebasestorage.app",
-  "messagingSenderId": "786972936856",
-  "measurementId": "",
-  "oAuthClientId": "786972936856-fjv2l65dav7avadptoab83vccd82m73m.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "apiKey": "AIzaSyBuxUEBR86fUtJeLmuQc8rcf-sK2ocXmE0",
+  "authDomain": "g-compas.firebaseapp.com",
+  "projectId": "g-compas",
+  "storageBucket": "g-compas.firebasestorage.app",
+  "messagingSenderId": "992610184607",
+  "appId": "1:992610184607:web:c542ac88701916bf14a1aa",
+  "firestoreDatabaseId": "(default)"
 }

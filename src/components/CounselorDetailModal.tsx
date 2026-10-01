@@ -82,6 +82,63 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
     },
   };
 
+  // Dynamic Individual Computations
+  const sortedGardner = (Object.keys(student.gardnerScores) as Array<keyof typeof student.gardnerScores>)
+    .map(key => ({
+      key,
+      score: student.gardnerScores[key],
+      info: gardnerInterpretations[key],
+      category: getGardnerCategory(student.gardnerScores[key]),
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const topTwoGardner = sortedGardner.slice(0, 2);
+  const lowestGardner = sortedGardner[sortedGardner.length - 1];
+
+  // Talent Me Cluster Breakdown
+  const talentClusters = [
+    { name: 'Thinking', score: student.talentDnaScores.thinking, role: 'Pemikir & Konseptor Analitis' },
+    { name: 'Doing', score: student.talentDnaScores.doing, role: 'Eksekutor Tangkas & Disiplin' },
+    { name: 'Relating', score: student.talentDnaScores.relating, role: 'Komunikator & Kolaborator Empatis' },
+  ].sort((a, b) => b.score - a.score);
+
+  const dominantCluster = talentClusters[0];
+
+  // Degree of certainty
+  const getCertaintyLevel = () => {
+    const absDiff = Math.abs(diffScore);
+    if (absDiff >= 6) return { level: 'Sangat Pasti & Dominan', badge: 'bg-emerald-950/80 border-emerald-500 text-emerald-300', desc: 'Rekomendasi jurusan sangat tegas tanpa keraguan kognitif.' };
+    if (absDiff >= 3) return { level: 'Signifikan & Terarah', badge: 'bg-blue-950/80 border-blue-500 text-blue-300', desc: 'Kecenderungan jurusan cukup kuat dan mudah diakselerasi.' };
+    return { level: 'Seimbang / Fleksibel (Hybrid)', badge: 'bg-amber-950/80 border-amber-500 text-amber-300', desc: 'Siswa memiliki potensi seimbang, sangat cocok untuk kombinasi lintas minat Kurikulum Merdeka.' };
+  };
+
+  const certainty = getCertaintyLevel();
+
+  // Individual Blind Spot explanation
+  const getBlindSpotAnalysis = () => {
+    if (dominantCluster.name === 'Thinking') {
+      return {
+        title: 'Titik Rawan: Kecenderungan Overthinking & Perfeksionisme',
+        desc: `Ananda ${student.fullName} memiliki kekuatan berpikir konseptual yang sangat dalam (${dominantCluster.score}%), namun rentan mengalami kelambatan eksekusi jika merasa informasinya belum lengkap. Guru dan konselor perlu memberikan batas waktu yang jelas dan mengajarkan bahwa progres nyata lebih bernilai daripada menunggu kesempurnaan.`,
+        action: 'Berikan apresiasi pada setiap langkah awal eksekusi, bukan hanya hasil akhir sempurna.'
+      };
+    } else if (dominantCluster.name === 'Doing') {
+      return {
+        title: 'Titik Rawan: Cepat Jenuh dengan Teori Abstrak Berkepanjangan',
+        desc: `Ananda ${student.fullName} adalah tipe eksekutor handal (${dominantCluster.score}%) yang berorientasi hasil cepat. Titik rawannya adalah mudah bosan saat dihadapkan pada materi ceramah satu arah atau analisis konseptual tanpa contoh nyata.`,
+        action: 'Libatkan dalam studi kasus terapan, praktikum laboratorium, dan tugas berbasis target harian.'
+      };
+    } else {
+      return {
+        title: 'Titik Rawan: Kepekaan Emosional & Rentan Distraksi Dinamika Sosial',
+        desc: `Ananda ${student.fullName} memiliki kecakapan relasi sosial yang menonjol (${dominantCluster.score}%). Titik rawannya adalah sangat sensitif terhadap suasana hati kelompok atau konflik antar teman, yang dapat mempengaruhi motivasi belajarnya jika lingkungan kelas kurang kondusif.`,
+        action: 'Bantu Ananda menetapkan batasan emosi sehat dan berikan apresiasi atas kontribusi diplomatisnya.'
+      };
+    }
+  };
+
+  const blindSpot = getBlindSpotAnalysis();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-fade-in">
       <div className="w-full max-w-5xl glass-card rounded-3xl border border-purple-500/40 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
@@ -199,14 +256,19 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
               {/* Highlight Card */}
               <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-950/70 via-slate-900/90 to-indigo-950/70 border border-purple-500/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
-                    Hasil Rekomendasi Resmi Sistem
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                      Diagnosis Resmi G-Compass
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${certainty.badge}`}>
+                      {certainty.level}
+                    </span>
                   </div>
                   <h3 className="text-2xl font-black text-white font-heading mt-1">
                     {student.recommendationTitle}
                   </h3>
                   <p className="text-xs text-slate-300 mt-1 max-w-xl">
-                    Berdasarkan selisih skor logika penalaran sains (IPA: {student.ipaScore}) vs sosial-ekonomi (IPS: {student.ipsScore}) dengan selisih {Math.abs(diffScore)} poin.
+                    Selisih penalaran sains (IPA: {student.ipaScore}) vs sosial-ekonomi (IPS: {student.ipsScore}) adalah {Math.abs(diffScore)} poin. {certainty.desc}
                   </p>
                 </div>
 
@@ -218,6 +280,34 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
                   <div className="text-center p-3 rounded-xl bg-slate-900/80 border border-purple-500/40">
                     <span className="text-[10px] text-purple-400 font-bold block">Skor Sosial (IPS)</span>
                     <span className="text-2xl font-black text-white">{student.ipsScore}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Executive Counselor Quick-Briefing Card */}
+              <div className="p-5 rounded-2xl bg-slate-900/90 border border-amber-500/30 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>Ringkasan Eksekutif Bimbingan Konseling untuk Ananda {student.fullName}</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                    <span className="text-emerald-400 font-bold block mb-1">🚀 2 Lokomotif Kekuatan Utama:</span>
+                    <p className="text-slate-200">
+                      <strong>{topTwoGardner[0].info.title}</strong> ({topTwoGardner[0].score}%) &amp; <strong>{topTwoGardner[1].info.title}</strong> ({topTwoGardner[1].score}%). Jadikan ini pijakan rasa percaya diri siswa.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                    <span className="text-amber-400 font-bold block mb-1">⚠️ Area Perlu Pendampingan:</span>
+                    <p className="text-slate-200">
+                      <strong>{lowestGardner.info.title}</strong> ({lowestGardner.score}%). Bukan kelemahan fatal, melainkan memerlukan metode belajar adaptif.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                    <span className="text-purple-400 font-bold block mb-1">🎯 Profil Kerja Talent Me:</span>
+                    <p className="text-slate-200">
+                      Dominan <strong>{dominantCluster.name}</strong> ({dominantCluster.score}%). Berperan sebagai {dominantCluster.role}.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -318,24 +408,49 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
                 💡 <strong>Prinsip Konseling Gardner:</strong> Setiap siswa memiliki konfigurasi profil kecerdasan yang unik. Konselor perlu berfokus pada 2–3 kecerdasan tertinggi siswa sebagai lokomotif pendorong, sembari memberikan strategi kompensasi untuk area yang masih membutuhkan pengembangan.
               </div>
 
+              {/* Top 2 vs Lowest Banner */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+                <div>
+                  <span className="text-emerald-400 font-bold">⭐ 2 Kecerdasan Tertinggi Siswa Ini:</span>
+                  <div className="text-white font-extrabold text-sm mt-0.5">
+                    {topTwoGardner[0].info.title} ({topTwoGardner[0].score}%) &bull; {topTwoGardner[1].info.title} ({topTwoGardner[1].score}%)
+                  </div>
+                </div>
+                <div className="text-right sm:text-right">
+                  <span className="text-amber-400 font-bold">🎯 Perlu Dukungan:</span>
+                  <div className="text-slate-300 font-semibold mt-0.5">
+                    {lowestGardner.info.title} ({lowestGardner.score}%)
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(Object.keys(student.gardnerScores) as Array<keyof typeof student.gardnerScores>).map((key) => {
                   const score = student.gardnerScores[key];
                   const info = gardnerInterpretations[key];
                   const category = getGardnerCategory(score);
+                  const isTop = topTwoGardner.some(t => t.key === key);
+                  const isLowest = lowestGardner.key === key;
 
                   return (
-                    <div key={key} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 transition-all flex flex-col justify-between">
+                    <div key={key} className={`p-4 rounded-2xl bg-slate-900/80 border ${isTop ? 'border-emerald-500/50 shadow-emerald-500/10 shadow-lg' : isLowest ? 'border-amber-500/40' : 'border-slate-800'} hover:border-purple-500/40 transition-all flex flex-col justify-between`}>
                       <div>
                         <div className="flex items-center justify-between gap-2 mb-2">
-                          <span className="font-bold text-white text-sm font-heading">{info.title}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-white text-sm font-heading">{info.title}</span>
+                            {isTop && (
+                              <span className="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-extrabold border border-emerald-500/40">
+                                Unggulan
+                              </span>
+                            )}
+                          </div>
                           <span className="text-lg font-black text-white font-mono">{score}%</span>
                         </div>
 
                         {/* Progress Bar */}
                         <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-2.5">
                           <div
-                            className="h-full bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full"
+                            className={`h-full ${isTop ? 'bg-gradient-to-r from-emerald-500 to-cyan-400' : 'bg-gradient-to-r from-purple-500 to-indigo-400'} rounded-full`}
                             style={{ width: `${score}%` }}
                           />
                         </div>
@@ -364,9 +479,16 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
             <div className="space-y-6">
               {/* 3 Pillars of Talent Me */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-5 rounded-2xl bg-slate-900/80 border border-blue-500/30">
-                  <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">
-                    Klaster Thinking
+                <div className={`p-5 rounded-2xl bg-slate-900/80 border ${dominantCluster.name === 'Thinking' ? 'border-blue-400 shadow-blue-500/20 shadow-lg' : 'border-blue-500/30'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">
+                      Klaster Thinking
+                    </div>
+                    {dominantCluster.name === 'Thinking' && (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold border border-blue-500/40">
+                        Dominan Siswa
+                      </span>
+                    )}
                   </div>
                   <div className="text-3xl font-black text-white font-heading">{student.talentDnaScores.thinking}%</div>
                   <p className="text-xs text-slate-300 mt-2 leading-relaxed">
@@ -374,9 +496,16 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-slate-900/80 border border-amber-500/30">
-                  <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
-                    Klaster Doing
+                <div className={`p-5 rounded-2xl bg-slate-900/80 border ${dominantCluster.name === 'Doing' ? 'border-amber-400 shadow-amber-500/20 shadow-lg' : 'border-amber-500/30'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
+                      Klaster Doing
+                    </div>
+                    {dominantCluster.name === 'Doing' && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-extrabold border border-amber-500/40">
+                        Dominan Siswa
+                      </span>
+                    )}
                   </div>
                   <div className="text-3xl font-black text-white font-heading">{student.talentDnaScores.doing}%</div>
                   <p className="text-xs text-slate-300 mt-2 leading-relaxed">
@@ -384,14 +513,35 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-slate-900/80 border border-purple-500/30">
-                  <div className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-1">
-                    Klaster Relating
+                <div className={`p-5 rounded-2xl bg-slate-900/80 border ${dominantCluster.name === 'Relating' ? 'border-purple-400 shadow-purple-500/20 shadow-lg' : 'border-purple-500/30'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-1">
+                      Klaster Relating
+                    </div>
+                    {dominantCluster.name === 'Relating' && (
+                      <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-extrabold border border-purple-500/40">
+                        Dominan Siswa
+                      </span>
+                    )}
                   </div>
                   <div className="text-3xl font-black text-white font-heading">{student.talentDnaScores.relating}%</div>
                   <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                     Kepekaan komunikasi sosial, empati mendengarkan, persuasi verbal, kolaborasi tim, dan kemampuan negosiasi kepemimpinan.
                   </p>
+                </div>
+              </div>
+
+              {/* Personalized Blind Spot Analysis */}
+              <div className="p-5 rounded-2xl bg-slate-900/90 border border-amber-500/40 space-y-2">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span>{blindSpot.title}</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {blindSpot.desc}
+                </p>
+                <div className="pt-1 text-[11px] text-amber-300 font-semibold">
+                  📌 <strong>Rekomendasi Intervensi Guru BK:</strong> {blindSpot.action}
                 </div>
               </div>
 

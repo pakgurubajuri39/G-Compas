@@ -66,11 +66,21 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   return errInfo;
 }
 
-// Initialize Firebase App
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Active Firebase configuration with fallback support for Vercel, Firebase Hosting, and local dev
+export const activeFirebaseConfig = {
+  apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) || firebaseConfig.apiKey || "AIzaSyBuxUEBR86fUtJeLmuQc8rcf-sK2ocXmE0",
+  authDomain: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN) || firebaseConfig.authDomain || "g-compas.firebaseapp.com",
+  projectId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_PROJECT_ID) || firebaseConfig.projectId || "g-compas",
+  storageBucket: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET) || firebaseConfig.storageBucket || "g-compas.firebasestorage.app",
+  messagingSenderId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID) || firebaseConfig.messagingSenderId || "992610184607",
+  appId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_APP_ID) || firebaseConfig.appId || "1:992610184607:web:c542ac88701916bf14a1aa"
+};
 
-/* CRITICAL: The app will break without this line */
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Initialize Firebase App
+const app = !getApps().length ? initializeApp(activeFirebaseConfig) : getApp();
+
+/* Firestore instance */
+export const db = getFirestore(app);
 
 // Test connection on boot per Firebase guidelines
 async function testConnection() {

@@ -1457,6 +1457,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           />
         )}
       </div>
+
+      {/* MODAL ANALISIS KONSELOR INDIVIDUAL (Eksklusif Admin & Tim Konselor BK) */}
+      {selectedCounselorStudent && (
+        <CounselorDetailModal
+          student={selectedCounselorStudent}
+          settings={settings}
+          onClose={() => setSelectedCounselorStudent(null)}
+        />
+      )}
     </div>
   );
 };
