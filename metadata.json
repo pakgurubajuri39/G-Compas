@@ -1,0 +1,6 @@
+{
+  "name": "G-Compass - Genesis Talent & Career Compass",
+  "description": "Unlock Your DNA Potential: Temukan Jurusan Impian & Top 3 Bakat Rahasiamu dalam 15 Menit di SMA Genesis Medicare.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

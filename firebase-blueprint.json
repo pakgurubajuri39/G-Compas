@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "TestResult": {
+      "title": "TestResult",
+      "description": "Student assessment result and contact details for G-Compass",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string", "maxLength": 150 },
+        "schoolOrigin": { "type": "string", "maxLength": 150 },
+        "grade": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 300 },
+        "studentPhone": { "type": "string", "maxLength": 30 },
+        "parentPhone": { "type": "string", "maxLength": 30 },
+        "ipaScore": { "type": "number" },
+        "ipsScore": { "type": "number" },
+        "gardnerScores": { "type": "object" },
+        "talentDnaScores": { "type": "object" },
+        "recommendation": { "type": "string", "enum": ["IPA", "IPS", "HYBRID"] },
+        "recommendationTitle": { "type": "string", "maxLength": 100 },
+        "topTalents": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "schoolOrigin", "grade", "studentPhone", "parentPhone", "recommendation"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global event settings and application active toggle for G-Compass",
+      "type": "object",
+      "properties": {
+        "isAppActive": { "type": "boolean" },
+        "schoolName": { "type": "string", "maxLength": 150 },
+        "schoolAddress": { "type": "string", "maxLength": 300 },
+        "eventName": { "type": "string", "maxLength": 150 },
+        "eventDate": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["isAppActive", "schoolName", "eventName"]
+    }
+  },
+  "firestore": {
+    "/test_results/{resultId}": {
+      "schema": "TestResult",
+      "description": "Submitted student test results"
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettings",
+      "description": "General application and event settings"
+    }
+  }
+}

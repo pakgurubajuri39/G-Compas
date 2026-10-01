@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTestResult(data) {
+      return data.fullName is string && data.fullName.size() <= 150 &&
+             data.schoolOrigin is string && data.schoolOrigin.size() <= 150 &&
+             data.studentPhone is string && data.studentPhone.size() <= 30 &&
+             data.parentPhone is string && data.parentPhone.size() <= 30;
+    }
+
+    match /test_results/{resultId} {
+      allow get, list: if true;
+      allow create: if isValidId(resultId) && isValidTestResult(request.resource.data);
+      allow update, delete: if isValidId(resultId);
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isValidId(settingId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
