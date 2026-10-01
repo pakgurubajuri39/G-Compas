@@ -18,7 +18,8 @@ import {
   FileText,
   School,
   HeartHandshake,
-  Target
+  Target,
+  Download
 } from 'lucide-react';
 
 interface CounselorDetailModalProps {
@@ -139,6 +140,643 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
 
   const blindSpot = getBlindSpotAnalysis();
 
+  // Extract clean signature name from principal's full name
+  const getSignatureName = (fullName?: string) => {
+    const raw = (fullName || 'Dra. Hj. Brimayanti').trim();
+    const cleaned = raw
+      .replace(/\b(Dra|Drs|Dr|Hj|H|Prof|Ir|M\.Pd|S\.Pd|M\.M|M\.Si|S\.T|S\.Kom|B\.A|M\.A|S\.Sos|S\.E|M\.Kom|S\.Psi|M\.Psi)\.?\b/gi, '')
+      .replace(/[,.]/g, '')
+      .trim();
+    if (!cleaned) return 'Brimayanti';
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    return parts.length > 1 ? parts[parts.length - 1] : parts[0];
+  };
+
+  const signatureName = getSignatureName(settings.principalName);
+  const principalFullName = settings.principalName || 'Dra. Hj. Brimayanti';
+  const formattedDate = new Date(student.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  const printDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // Generate comprehensive, high-contrast, pure-white printable HTML dossier
+  const generateCounselorPrintHtml = () => {
+    const gardnerRowsHtml = sortedGardner.map((item, idx) => `
+      <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+        <td style="text-align: center; font-weight: 700; color: #475569; width: 28px; padding: 7px 8px; border: 1px solid #cbd5e1;">${idx + 1}</td>
+        <td style="font-weight: 700; color: #0f172a; width: 140px; padding: 7px 8px; border: 1px solid #cbd5e1;">${item.info.title}</td>
+        <td style="text-align: center; width: 70px; padding: 7px 8px; border: 1px solid #cbd5e1;">
+          <span style="font-weight: 900; font-size: 13px; color: ${item.score >= 80 ? '#047857' : item.score >= 65 ? '#1d4ed8' : '#b45309'};">${item.score}</span>
+          <span style="font-size: 10px; color: #64748b;">/100</span>
+        </td>
+        <td style="width: 135px; padding: 7px 8px; border: 1px solid #cbd5e1;">
+          <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9.5px; font-weight: 700; background: ${item.score >= 80 ? '#ecfdf5; color: #047857; border: 1px solid #a7f3d0' : item.score >= 65 ? '#eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe' : '#fffbeb; color: #b45309; border: 1px solid #fde68a'};">
+            ${item.category.label}
+          </span>
+        </td>
+        <td style="color: #334155; font-size: 10px; line-height: 1.4; padding: 7px 8px; border: 1px solid #cbd5e1;">${item.info.desc}</td>
+        <td style="color: #0f172a; font-size: 10px; line-height: 1.4; padding: 7px 8px; border: 1px solid #cbd5e1; background: #fafafa;"><strong>📌 Tips Tindakan BK:</strong> ${item.info.counselTip}</td>
+      </tr>
+    `).join('');
+
+    const topTalentsHtml = student.topTalents.map((talent, idx) => `
+      <div style="padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 6px; break-inside: avoid;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+          <span style="font-size: 11.5px; font-weight: 800; color: #0f172a;">#${idx + 1} ${talent}</span>
+          <span style="font-size: 9.5px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 1.5px 6px; border-radius: 4px;">Bakat Alami Unggulan</span>
+        </div>
+        <p style="font-size: 10px; color: #334155; margin: 0 0 3px 0; line-height: 1.35;">
+          Bakat ini menandakan bahwa siswa memiliki kecakapan alami di atas rata-rata sebaya dalam mengeksekusi tanggung jawab yang membutuhkan fokus, ketelitian, serta koordinasi mandiri.
+        </p>
+        <div style="font-size: 10px; color: #7c2d12; font-weight: 600;">
+          🌟 Peran Organisasi/Kepanitiaan SMA: Koordinator Lapangan / Ketua Divisi Strategis / Public Relations.
+        </div>
+      </div>
+    `).join('');
+
+    const extracurricularsHtml = student.recommendedExtracurriculars.map(e => `
+      <li style="margin-bottom: 2px; color: #1e293b;">• ${e}</li>
+    `).join('');
+
+    const careersHtml = student.careerProspects.map(c => `
+      <li style="margin-bottom: 2px; color: #1e293b;">• ${c}</li>
+    `).join('');
+
+    const interviewQuestionsHtml = `
+      <div style="padding: 8px 12px; background: #f8fafc; border-left: 3px solid #059669; border-radius: 0 6px 6px 0; margin-bottom: 6px;">
+        <div style="font-size: 10.5px; font-weight: 800; color: #059669; margin-bottom: 2px;">Pertanyaan 1 (Validasi Minat Intrinsik):</div>
+        <div style="font-size: 10px; color: #1e293b; font-style: italic;">
+          "Halo ${student.fullName}, dari hasil asesmen G-Compass, kamu menunjukkan potensi kuat pada jurusan <strong>${student.recommendation}</strong>. Sejauh ini, saat belajar di SMP ${student.schoolOrigin}, materi pelajaran apa yang membuatmu lupa waktu saat mengerjakannya?"
+        </div>
+      </div>
+      <div style="padding: 8px 12px; background: #f8fafc; border-left: 3px solid #2563eb; border-radius: 0 6px 6px 0; margin-bottom: 6px;">
+        <div style="font-size: 10.5px; font-weight: 800; color: #2563eb; margin-bottom: 2px;">Pertanyaan 2 (Eksplorasi Ambisi Karir):</div>
+        <div style="font-size: 10px; color: #1e293b; font-style: italic;">
+          "G-Compass mendeteksi bakat utamamu adalah <em>${student.topTalents.join(', ')}</em>. Apakah kamu sudah punya bayangan ingin kuliah di fakultas apa nanti, atau impian profesi spesifik setelah lulus SMA?"
+        </div>
+      </div>
+      <div style="padding: 8px 12px; background: #f8fafc; border-left: 3px solid #7c3aed; border-radius: 0 6px 6px 0;">
+        <div style="font-size: 10.5px; font-weight: 800; color: #7c3aed; margin-bottom: 2px;">Pertanyaan 3 (Penyelarasan Ekspektasi Orang Tua):</div>
+        <div style="font-size: 10px; color: #1e293b; font-style: italic;">
+          "Kepada Bapak/Ibu wali murid, apakah hasil asesmen G-Compass ini selaras dengan pengamatan di rumah? Di SMA Genesis Medicare, kami siap mendampingi agar ananda tetap berprestasi tinggi tanpa tekanan psikologis berlebih."
+        </div>
+      </div>
+    `;
+
+    const disparityGuideHtml = `
+      <div style="font-size: 10px; color: #334155; line-height: 1.45;">
+        <div style="margin-bottom: 5px;">
+          <strong>• Jika Orang Tua Menghendaki IPA sedangkan Hasil Dominan IPS:</strong>
+          <span style="color: #475569;">Paparkan data skor penalaran sosial siswa dan tren karir modern berpenghasilan tinggi seperti Corporate Lawyer, Investment Portfolio Manager, Hubungan Internasional, dan Creative Brand Director yang membutuhkan pondasi IPS kokoh.</span>
+        </div>
+        <div>
+          <strong>• Jika Hasil Asesmen Adalah MULTITALENTA (HYBRID):</strong>
+          <span style="color: #475569;">Jelaskan bahwa tipe Hybrid memiliki fleksibilitas kognitif tinggi dan sangat diuntungkan dalam skema Kurikulum Merdeka untuk mengambil kombinasi mata pelajaran IPA & IPS terarah.</span>
+        </div>
+      </div>
+    `;
+
+    const signaturesHtml = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px; padding-top: 12px; border-top: 1px dashed #cbd5e1; page-break-inside: avoid;">
+        <div style="width: 45%; text-align: center;">
+          <div style="font-size: 10px; color: #64748b; margin-bottom: 3px;">Mengetahui & Menyetujui,</div>
+          <div style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 45px;">Guru Bimbingan Konseling (BK)</div>
+          <div style="font-size: 11px; font-weight: 700; color: #0f172a; text-decoration: underline;">( Tim Konselor BK SMA Genesis Medicare )</div>
+          <div style="font-size: 9.5px; color: #64748b;">NIP. Guru Bimbingan Konseling</div>
+        </div>
+        <div style="width: 45%; text-align: center; position: relative;">
+          <div style="font-size: 10px; color: #64748b; margin-bottom: 3px;">Depok, ${formattedDate}</div>
+          <div style="font-size: 11px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Kepala Sekolah SMA Genesis Medicare</div>
+          
+          <!-- Signature & Stamp -->
+          <div style="height: 42px; display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 3px;">
+            <div style="font-family: 'Great Vibes', 'Dancing Script', 'Caveat', cursive, serif; font-size: 26px; color: #1e3a8a; font-style: italic; transform: rotate(-3deg);">
+              ${signatureName}
+            </div>
+            <!-- Stamp simulation -->
+            <div style="position: absolute; right: 20px; top: -6px; width: 60px; height: 60px; border: 2px dashed #dc2626; border-radius: 50%; opacity: 0.28; display: flex; align-items: center; justify-content: center; font-size: 7.5px; font-weight: 900; color: #dc2626; transform: rotate(12deg); pointer-events: none; text-align: center; line-height: 1;">
+              SMA GM<br/>DEPOK<br/>VALID
+            </div>
+          </div>
+
+          <div style="font-size: 11px; font-weight: 700; color: #0f172a; text-decoration: underline;">( ${principalFullName} )</div>
+          <div style="font-size: 9.5px; color: #64748b;">NIP. Kepala Sekolah SMA Genesis Medicare</div>
+        </div>
+      </div>
+    `;
+
+    return `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dossier_Konselor_${student.fullName.replace(/\s+/g, '_')}_${student.id.substring(0, 8)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Dancing+Script:wght@700&family=Great+Vibes&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: #0f172a;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .print-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 10px 0;
+    }
+    /* Toolbar for preview */
+    .no-print {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    .btn-action {
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        padding: 0;
+      }
+    }
+    /* Kop Surat */
+    .kop-header {
+      border-bottom: 3px double #0f172a;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .kop-emblem {
+      width: 58px;
+      height: 58px;
+      background: #0f172a;
+      color: #f59e0b;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      shrink-0: 0;
+    }
+    .kop-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+    .kop-school {
+      font-size: 20px;
+      font-weight: 900;
+      color: #0f172a;
+      margin: 1px 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .kop-details {
+      font-size: 10px;
+      color: #475569;
+      line-height: 1.35;
+    }
+    /* Document Title */
+    .doc-banner {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-left: 5px solid #7c3aed;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 14px;
+    }
+    .doc-title {
+      font-size: 14px;
+      font-weight: 900;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 0 0 2px 0;
+    }
+    .doc-subtitle {
+      font-size: 11px;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .doc-meta {
+      font-size: 9.5px;
+      color: #64748b;
+    }
+    /* Section Formatting */
+    .section-box {
+      margin-bottom: 14px;
+      break-inside: avoid;
+    }
+    .section-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+    }
+    table.data-table th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 800;
+      padding: 7px 8px;
+      border: 1px solid #cbd5e1;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    table.data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .card-info {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-container">
+    <!-- Toolbar (Hidden during print) -->
+    <div class="no-print">
+      <div>
+        <strong style="color: #f59e0b; font-size: 13px;">G-Compass Dossier Konselor</strong>
+        <span style="font-size: 11px; color: #94a3b8; margin-left: 8px;">Pratinjau Cetak Lembar Analisis Lengkap (A4 Bersih & Jelas)</span>
+      </div>
+      <button class="btn-action" onclick="window.print()">
+        🖨️ Cetak Dokumen / Simpan PDF (Ctrl + P)
+      </button>
+    </div>
+
+    <!-- KOP SURAT RESMI -->
+    <div class="kop-header">
+      <div class="kop-emblem">GM</div>
+      <div style="flex: 1;">
+        <div class="kop-title">Perguruan Genesis Medicare • Bimbingan & Konseling</div>
+        <div class="kop-school">${settings.schoolName || 'SMA GENESIS MEDICARE DEPOK'}</div>
+        <div class="kop-details">
+          Akreditasi A • NPSN: 69989823 • Kurikulum Merdeka<br/>
+          Alamat: ${settings.schoolAddress || 'Jl. Gas Alam No. 9, Curug, Kec. Cimanggis, Kota Depok, Jawa Barat 16453'}<br/>
+          No. Layanan Konseling: ${settings.whatsappNumber || '081289123456'} • Web Sistem: g-compas.web.app
+        </div>
+      </div>
+      <div style="text-align: right; font-size: 10px; color: #64748b;">
+        <div style="font-weight: 800; color: #7c3aed;">G-COMPASS 2026/2027</div>
+        <div>Dokumen Khusus Konselor</div>
+        <div style="font-size: 9px; margin-top: 4px; color: #059669; font-weight: 700;">VERIFIED RECORD</div>
+      </div>
+    </div>
+
+    <!-- DOCUMENT TITLE -->
+    <div class="doc-banner">
+      <div class="doc-title">BERKAS LENGKAP ANALISIS DIAGNOSTIK & PANDUAN KONSELOR BK</div>
+      <div class="doc-subtitle">Pemetaan Potensi Kognitif, Kecerdasan Majemuk & Penjurusan Siswa Kelas X SMA</div>
+      <div class="doc-meta">
+        No. Dokumen: <strong>BK-GM/${student.id.toUpperCase()}</strong> • Tanggal Asesmen: <strong>${formattedDate}</strong> • Dicetak: <strong>${printDate}</strong>
+      </div>
+    </div>
+
+    <!-- BAGIAN 1: IDENTITAS PESERTA DIDIK -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>📋 Bagian I: Identitas Lengkap Peserta Didik</span>
+      </div>
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <td style="width: 22%; font-weight: 700; background: #f8fafc; color: #475569;">Nama Lengkap Siswa</td>
+            <td style="width: 40%; font-weight: 800; color: #0f172a; font-size: 12px;">${student.fullName}</td>
+            <td style="width: 18%; font-weight: 700; background: #f8fafc; color: #475569;">NISN / ID Tes</td>
+            <td style="width: 20%; font-weight: 700; color: #0f172a;">${student.id.substring(0, 14)}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 700; background: #f8fafc; color: #475569;">Asal Sekolah (SMP)</td>
+            <td style="font-weight: 700; color: #0f172a;">${student.schoolOrigin}</td>
+            <td style="font-weight: 700; background: #f8fafc; color: #475569;">Kelas / Jenjang</td>
+            <td style="font-weight: 700; color: #0f172a;">Kelas ${student.grade}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 700; background: #f8fafc; color: #475569;">Kontak WhatsApp Siswa</td>
+            <td style="color: #0f172a;">${student.studentPhone}</td>
+            <td style="font-weight: 700; background: #f8fafc; color: #475569;">Kontak WhatsApp Ortu</td>
+            <td style="color: #0f172a;">${student.parentPhone}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 700; background: #f8fafc; color: #475569;">Alamat Domisili</td>
+            <td colspan="3" style="color: #334155;">${student.address}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- BAGIAN 2: DIAGNOSTIK KOGNITIF & REKOMENDASI PENJURUSAN -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>🎯 Bagian II: Diagnostik Kognitif & Rekomendasi Penjurusan</span>
+      </div>
+      <div class="grid-2">
+        <div class="card-info" style="border-left: 4px solid ${student.recommendation === 'IPA' ? '#2563eb' : student.recommendation === 'IPS' ? '#7c3aed' : '#f59e0b'};">
+          <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Hasil Rekomendasi Peminatan</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0;">
+            <span class="badge" style="background: ${student.recommendation === 'IPA' ? '#eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe' : student.recommendation === 'IPS' ? '#f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe' : '#fffbeb; color: #b45309; border: 1px solid #fde68a'}; font-size: 12px; padding: 3px 10px;">
+              JURUSAN ${student.recommendation}
+            </span>
+            <span style="font-size: 10.5px; font-weight: 700; color: #0f172a;">${student.recommendationTitle}</span>
+          </div>
+          <div style="font-size: 10px; color: #475569; margin-top: 4px;">
+            Tingkat Kepastian: <strong>${certainty.level}</strong> • ${certainty.desc}
+          </div>
+        </div>
+
+        <div class="card-info">
+          <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Komparasi Poin Peminatan</div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0;">
+            <div>
+              <span style="font-size: 18px; font-weight: 900; color: #1d4ed8;">${student.ipaScore}</span>
+              <span style="font-size: 10px; color: #64748b;">Poin IPA</span>
+            </div>
+            <div style="font-size: 11px; font-weight: 800; color: #475569;">
+              Selisih: ${Math.abs(diffScore)} Poin
+            </div>
+            <div>
+              <span style="font-size: 18px; font-weight: 900; color: #6d28d9;">${student.ipsScore}</span>
+              <span style="font-size: 10px; color: #64748b;">Poin IPS</span>
+            </div>
+          </div>
+          <div style="font-size: 10px; color: #475569;">
+            Gaya Belajar Optimal: <strong>${student.learningStyle}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BAGIAN 3: MATRIKS LENGKAP 8 KECERDASAN HOWARD GARDNER -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>🧠 Bagian III: Matriks Lengkap 8 Kecerdasan Majemuk (Howard Gardner)</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="text-align: center; width: 28px;">No</th>
+            <th style="width: 140px;">Dimensi Kecerdasan</th>
+            <th style="text-align: center; width: 70px;">Skor</th>
+            <th style="width: 135px;">Tingkat Dominansi</th>
+            <th>Karakteristik Kognitif Siswa</th>
+            <th>Arahan Bimbingan Guru BK</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${gardnerRowsHtml}
+        </tbody>
+      </table>
+      <div style="margin-top: 6px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 10px; display: flex; justify-content: space-between;">
+        <span>🌟 <strong>2 Kecerdasan Tertinggi:</strong> ${topTwoGardner.map(g => `${g.info.title} (${g.score}/100)`).join(', ')}</span>
+        <span>⚠️ <strong>Area Pendampingan Stimulasi:</strong> ${lowestGardner.info.title} (${lowestGardner.score}/100)</span>
+      </div>
+    </div>
+
+    <!-- BAGIAN 4: KLASTER BAKAT TALENT ME & BEDAH TITIK RAWAN -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>⚡ Bagian IV: Pemetaan Klaster Bakat Talent Me & Bedah Titik Rawan (Blind Spot)</span>
+      </div>
+      
+      <!-- 3 Klaster -->
+      <div class="grid-3" style="margin-bottom: 8px;">
+        <div class="card-info" style="border-top: 3px solid ${dominantCluster.name === 'Thinking' ? '#0284c7' : '#94a3b8'};">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #0284c7;">
+            <span>THINKING (ANALITIS)</span>
+            ${dominantCluster.name === 'Thinking' ? '<span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 1px 4px; font-size: 8.5px;">Dominan</span>' : ''}
+          </div>
+          <div style="font-size: 18px; font-weight: 900; color: #0f172a; margin: 2px 0;">${student.talentDnaScores.thinking}%</div>
+          <div style="font-size: 9.5px; color: #475569;">Pemikir konseptual, logika terstruktur, strategi sistematis.</div>
+        </div>
+
+        <div class="card-info" style="border-top: 3px solid ${dominantCluster.name === 'Doing' ? '#d97706' : '#94a3b8'};">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #d97706;">
+            <span>DOING (EKSEKUSI)</span>
+            ${dominantCluster.name === 'Doing' ? '<span class="badge" style="background: #fef3c7; color: #b45309; padding: 1px 4px; font-size: 8.5px;">Dominan</span>' : ''}
+          </div>
+          <div style="font-size: 18px; font-weight: 900; color: #0f172a; margin: 2px 0;">${student.talentDnaScores.doing}%</div>
+          <div style="font-size: 9.5px; color: #475569;">Eksekusi praktis, disiplin target, ketangkasan operasional.</div>
+        </div>
+
+        <div class="card-info" style="border-top: 3px solid ${dominantCluster.name === 'Relating' ? '#7c3aed' : '#94a3b8'};">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #7c3aed;">
+            <span>RELATING (KOMUNIKASI)</span>
+            ${dominantCluster.name === 'Relating' ? '<span class="badge" style="background: #f5f3ff; color: #6d28d9; padding: 1px 4px; font-size: 8.5px;">Dominan</span>' : ''}
+          </div>
+          <div style="font-size: 18px; font-weight: 900; color: #0f172a; margin: 2px 0;">${student.talentDnaScores.relating}%</div>
+          <div style="font-size: 9.5px; color: #475569;">Empati sosial, diplomasi verbal, negosiasi tim kolaboratif.</div>
+        </div>
+      </div>
+
+      <!-- Blind Spot Box -->
+      <div style="padding: 9px 12px; background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 0 6px 6px 0; margin-bottom: 8px;">
+        <div style="font-size: 11px; font-weight: 800; color: #b45309; margin-bottom: 2px;">⚠️ ${blindSpot.title}</div>
+        <div style="font-size: 10px; color: #334155; line-height: 1.4; margin-bottom: 4px;">${blindSpot.desc}</div>
+        <div style="font-size: 10px; color: #78350f; font-weight: 700;">📌 Rekomendasi Intervensi Guru BK: ${blindSpot.action}</div>
+      </div>
+
+      <!-- Top 3 Talents -->
+      <div>
+        <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Penjelasan Mendalam Top 3 Bakat Alami Dominan:</div>
+        ${topTalentsHtml}
+      </div>
+    </div>
+
+    <!-- BAGIAN 5: PANDUAN SESI WAWANCARA & KONSELING ORANG TUA -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>🗣️ Bagian V: Panduan Sesi Wawancara PPDB & Penyelarasan Harapan Orang Tua</span>
+      </div>
+      
+      <div style="margin-bottom: 8px;">
+        ${interviewQuestionsHtml}
+      </div>
+
+      <div style="padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+        <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Strategi Konseling Menghadapi Disparitas Minat (Siswa vs Orang Tua):</div>
+        ${disparityGuideHtml}
+      </div>
+    </div>
+
+    <!-- BAGIAN 6: REKOMENDASI KURIKULUM MERDEKA & PROSPEK KARIER -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>🏫 Bagian VI: Rekomendasi Kurikulum Merdeka & Ekstrakurikuler SMA Genesis Medicare</span>
+      </div>
+      
+      <div class="grid-2">
+        <div class="card-info">
+          <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Paket Mapel Pilihan Terarah:</div>
+          <p style="font-size: 10px; color: #334155; margin: 0 0 6px 0; line-height: 1.4;">
+            ${student.recommendation === 'IPA'
+              ? 'Matematika Tingkat Lanjut, Fisika, Kimia, Biologi, dan Informatika.'
+              : student.recommendation === 'IPS'
+              ? 'Ekonomi, Sosiologi, Geografi, Bahasa Inggris Tingkat Lanjut, dan Antropologi.'
+              : 'Kombinasi Matematika Tingkat Lanjut, Ekonomi Terapan, Informatika, dan Bahasa Inggris.'}
+          </p>
+          <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">Ekstrakurikuler Unggulan SMA GM:</div>
+          <ul style="margin: 0; padding-left: 14px; font-size: 10px;">
+            ${extracurricularsHtml}
+          </ul>
+        </div>
+
+        <div class="card-info">
+          <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Prospek Karier Masa Depan yang Selaras:</div>
+          <ul style="margin: 0 0 6px 0; padding-left: 14px; font-size: 10px;">
+            ${careersHtml}
+          </ul>
+          <div style="font-size: 9.5px; color: #0284c7; background: #e0f2fe; padding: 6px 8px; border-radius: 4px; border-left: 3px solid #0284c7;">
+            <strong>Catatan Kurikulum GM:</strong> Siswa direkomendasikan masuk pemantauan bimbingan intensif persiapan Olimpiade Sains / Debat Bahasa Inggris / Inkubator Bisnis.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BAGIAN 7: LEMBAR OBSERVASI & PENGESAHAN DOKUMEN -->
+    <div class="section-box" style="margin-top: 14px;">
+      <div class="section-title">
+        <span>✍️ Bagian VII: Lembar Observasi & Pengesahan Dokumen Konseling</span>
+      </div>
+
+      <div style="border: 1px dashed #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; background: #fafafa;">
+        <div style="font-size: 10px; font-weight: 700; color: #64748b; margin-bottom: 4px;">CATATAN KONSULTASI / HASIL KESEPAKATAN DENGAN ORANG TUA SISWA:</div>
+        <div style="height: 38px; border-bottom: 1px dotted #cbd5e1; margin-bottom: 6px;"></div>
+        <div style="height: 20px; border-bottom: 1px dotted #cbd5e1;"></div>
+      </div>
+
+      ${signaturesHtml}
+    </div>
+  </div>
+</body>
+</html>`;
+  };
+
+  // Direct High-Fidelity Print Engine using invisible iframe for clean print dialog
+  const handlePrint = () => {
+    const printContent = generateCounselorPrintHtml();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(printContent);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error('Print iframe error', e);
+        }
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 2000);
+      }, 500);
+    } else {
+      // Popup fallback
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+    }
+  };
+
+  // Download Standalone Full Dossier HTML File
+  const handleDownloadHtml = () => {
+    const printContent = generateCounselorPrintHtml();
+    const blob = new Blob([printContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Dossier_Konselor_${student.fullName.replace(/\s+/g, '_')}_${student.id.substring(0, 8)}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-fade-in">
       <div className="w-full max-w-5xl glass-card rounded-3xl border border-purple-500/40 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
@@ -167,17 +805,29 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Tombol Cetak Berkas Lengkap */}
             <button
-              onClick={() => window.print()}
-              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-              title="Cetak Lembar Konseling"
+              onClick={handlePrint}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              title="Cetak Seluruh Berkas Konselor Lengkap (Format Resmi A4)"
             >
               <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">Cetak</span>
+              <span className="hidden sm:inline">Cetak Berkas Lengkap</span>
             </button>
+
+            {/* Tombol Unduh Dokumen Lengkap (HTML) */}
+            <button
+              onClick={handleDownloadHtml}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Unduh Arsip Lengkap Dossier Format Dokumen HTML"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden md:inline">Unduh HTML</span>
+            </button>
+
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               title="Tutup"
             >
               <X className="w-6 h-6" />
@@ -667,16 +1317,36 @@ export const CounselorDetailModal: React.FC<CounselorDetailModalProps> = ({ stud
         </div>
 
         {/* Modal Bottom Actions */}
-        <div className="p-4 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between shrink-0">
-          <div className="text-xs text-slate-400">
-            Konselor Pendamping: <strong>Tim BK SMA Genesis Medicare</strong>
+        <div className="p-4 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="text-xs text-slate-400 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Konselor Pendamping: <strong>Tim BK SMA Genesis Medicare</strong></span>
           </div>
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs tracking-wide shadow-lg shadow-purple-600/30 transition-all"
-          >
-            Selesai Meninjau
-          </button>
+          
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={handleDownloadHtml}
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-amber-400" />
+              <span>Unduh Arsip HTML</span>
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Cetak Berkas Konselor (Lengkap & Bersih)</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs tracking-wide shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       </div>
     </div>
